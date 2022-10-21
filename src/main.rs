@@ -13,7 +13,7 @@ const WHEEL_PRIMES: [usize; 4] = [2, 3, 5, 7];
 const WHEEL: [usize; 48] = [1, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 121, 127, 131, 137, 139, 143, 149, 151, 157, 163, 167, 169, 173, 179, 181, 187, 191, 193, 197, 199, 209];
 const WHEEL_SZ: usize = 210;
 
-const BLOCK_SZ: usize = 1 << 16;
+const BLOCK_SZ: usize = 1 << 17;
 
 fn simple_sieve(n: usize) -> Vec<usize> {
     let mut is_prime = vec![true; n + 1];
@@ -26,7 +26,9 @@ fn simple_sieve(n: usize) -> Vec<usize> {
 }
 
 fn set_bit(flags: &mut [u8], bit_idx: usize) {
-    flags[bit_idx >> 3] |= 1 << (bit_idx & 0b111);
+    unsafe {
+        *flags.get_unchecked_mut(bit_idx >> 3) |= 1 << (bit_idx & 0b111);
+    }
 }
 
 // Set flags that are k mod p in flags. Return next offset.
@@ -71,7 +73,7 @@ fn count_primes(small_primes: Vec<usize>, nblocks: usize, w: usize) -> u32 {
 
 fn main() {
     let byte_sz = 8 * WHEEL_SZ;
-    let nblocks = 9;
+    let nblocks = 48;
     let n: usize = nblocks * BLOCK_SZ * byte_sz;
     println!("Calculating number of primes below {n}");
     let s = (n as f64).sqrt() as usize;
