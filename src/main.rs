@@ -1,5 +1,6 @@
 use std::thread;
 //use std::time::Duration;
+const WHEEL_PRIMES: [usize; 2] = [2, 3];
 const WHEEL: [usize; 2] = [1, 5];
 const WHEEL_SZ: usize = 6;
 
@@ -27,39 +28,60 @@ fn sieve(primes: &[(usize, usize)], flags: &mut [u8]) {
     primes.iter().for_each(|&(p, k)| sieve_with_prime(p, k, flags));
 }
 
-fn count_primes(primes: &[(usize, usize)], flags: &mut [u8]) -> u32 {
+fn count_bits(primes: &[(usize, usize)], flags: &mut [u8]) -> u32 {
     flags.fill(0);
     sieve(primes, flags);
     flags.iter().map(|&b| b.count_zeros()).sum()
 }
 
-fn main() {
-    const N: usize = 2;
-    let primes = simple_sieve(96);
-    dbg!(&primes);
-    let mut flags: [u8; N] = [0; N];
-    let x = count_primes(&[(5, 4), (7, 1)], &mut flags);
-    let y = count_primes(&[(5, 0), (7, 5)], &mut flags);
-    dbg!(x + y + 4);
+fn mod_div(a: usize, b: usize) -> Option<usize> {
+    WHEEL.iter().find(|&&w| (w * b) % WHEEL_SZ == a).copied()
+}
 
-    //let answer: u32 = count_primes(&[(2, 0), (3, 0), (5, 0), (7, 0)], &mut flags);
+fn count_primes(small_primes: Vec<usize>, nbytes: usize, w: usize) -> u32 {
+    let mut flags = vec![0; nbytes];
+    let records = small_primes.iter().map(|&p| {
+        (p, (mod_div(w, p).unwrap() * p) / WHEEL_SZ)
+    }).collect::<Vec<(usize, usize)>>();
+    count_bits(&records, &mut flags)
+}
+
+fn main() {
+    let byte_sz = 8 * WHEEL_SZ;
+    let n: usize = 1_000_000 * byte_sz;
+    let nbytes = n / byte_sz;
+    let s = (n as f64).sqrt() as usize;
+    let small_primes: Vec<usize> = simple_sieve(s);
+    let small_primes: Vec<usize> = small_primes.iter()
+        .filter(|p| !WHEEL_PRIMES.contains(p))
+        .cloned()
+        .collect::<Vec<_>>();
+    let now = std::time::Instant::now();
+
     /*
-    for &p in &[2, 3, 5, 7] {
-        sieve(p, 0, &mut flags);
-    }
-    for &f in &flags {
-        println!("{:#b}", f);
-    }
-    let answer: u32 = (0..N).map(|i| flags[i].count_zeros()).sum::<u32>() + 3;
-    */
-    /*
-    let answer: usize = (0..2).map(|i| {
-        thread::spawn(move || -> usize {
-            (100 * i.. 100 * (i + 1)).sum()
-            //println!("hi number {total} from thread {i}");
+    // Single threaded
+    let answer: u32 = WHEEL.iter()
+        .map(|&w| count_primes(small_primes.clone(), nbytes, w))
+        .sum();
+    // Multithreaded 1: slow
+    let answer: u32 = WHEEL.iter().map(|&w| {
+        let small_primes = small_primes.clone();
+        thread::spawn(move || -> u32 {
+            count_primes(small_primes, nbytes, w)
         }).join().unwrap()
     }).sum();
-    dbg!(answer);
     */
+    // Multithreaded 2: fast
+    let handles = WHEEL.iter().map(|&w| {
+        let small_primes = small_primes.clone();
+        thread::spawn(move || -> u32 {
+            count_primes(small_primes, nbytes, w)
+        })
+    }).collect::<Vec<_>>();
+    let answer: u32 = handles.into_iter().map(|handle| handle.join().unwrap()).sum();
+    let final_answer = answer as usize + WHEEL_PRIMES.len() + small_primes.len() - 1;
+    dbg!(final_answer);
+    println!("Time taken was {} milliseconds", now.elapsed().as_micros());
 }
+
 
