@@ -1,8 +1,12 @@
-use std::thread;
-//use std::time::Duration;
+/*
 const WHEEL_PRIMES: [usize; 2] = [2, 3];
 const WHEEL: [usize; 2] = [1, 5];
 const WHEEL_SZ: usize = 6;
+*/
+
+const WHEEL_PRIMES: [usize; 3] = [2, 3, 5];
+const WHEEL: [usize; 8] = [1, 7, 11, 13, 17, 19, 23, 29];
+const WHEEL_SZ: usize = 30;
 
 fn simple_sieve(n: usize) -> Vec<usize> {
     let mut is_prime = vec![true; n + 1];
@@ -74,7 +78,7 @@ fn main() {
     // Multithreaded 2: fast
     let handles = WHEEL.iter().map(|&w| {
         let small_primes = small_primes.clone();
-        thread::spawn(move || -> u32 {
+        std::thread::spawn(move || -> u32 {
             count_primes(small_primes, nbytes, w)
         })
     }).collect::<Vec<_>>();
