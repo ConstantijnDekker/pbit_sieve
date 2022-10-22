@@ -14,7 +14,9 @@ fn main() {
         }
         2 => {
             let now = std::time::Instant::now();
-            let nblocks: usize = args[1].replace('_', "").parse()
+            let nblocks: usize = args[1]
+                .replace('_', "")
+                .parse()
                 .expect("Invalid numeric literal format");
             let prime_count: u64 = sieve::count_primes(nblocks);
             println!("The number of primes is {prime_count}");
@@ -22,7 +24,6 @@ fn main() {
                 "Time taken was {} seconds",
                 now.elapsed().as_micros() as f64 / 1_000_000.
             );
-
         }
         _ => {
             println!("An incorrect number of arguments was given.");
