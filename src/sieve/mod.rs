@@ -18,10 +18,8 @@ fn small_sieve(n: usize) -> Vec<usize> {
             }
         }
     }
-    // Start from 11 to excluse primes 2, 3, 5, 7
-    (11..=n)
-        .filter(|&p| is_prime[p])
-        .collect()
+    // Start from 11 to exclude primes 2, 3, 5, 7
+    (11..=n).filter(|&p| is_prime[p]).collect()
 }
 
 /// Set the flags that are k mod p in block. Return next offset.
@@ -35,9 +33,9 @@ fn sieve_with_prime(p: usize, k: usize, block: &mut [u64]) -> usize {
 }
 
 /// Sieve primes from a block.
-fn sieve_block(small_primes: &[usize], offsets: &mut [usize], block: &mut [u64]) {
+fn sieve_block(primes: &[usize], offsets: &mut [usize], block: &mut [u64]) {
     block.fill(0);
-    small_primes
+    primes
         .iter()
         .zip(offsets.iter_mut())
         .for_each(|(p, k)| *k = sieve_with_prime(*p, *k, block));
@@ -53,25 +51,21 @@ fn mask(width: usize) -> u64 {
     (1u64 << width).wrapping_sub(1)
 }
 
-fn sieve_blocks(
-    mut nbits: usize,
-    small_primes: &[usize],
-    offsets: &mut [usize],
-    block: &mut [u64],
-) -> u64 {
+/// Sieve nbits amount of bits with the primes at the given offsets.
+fn sieve(mut nbits: usize, primes: &[usize], offsets: &mut [usize], block: &mut [u64]) -> u64 {
     let mut prime_count = 0;
     while nbits >= 64 * BLOCK_SZ {
-        sieve_block(small_primes, offsets, block);
+        sieve_block(primes, offsets, block);
         prime_count += count_zeros(block);
         nbits -= 64 * BLOCK_SZ;
     }
     // The final block does not have to be fully processed.
     let last = nbits / 64;
-    sieve_block(small_primes, offsets, &mut block[..=last]);
+    sieve_block(primes, offsets, &mut block[..=last]);
     prime_count += count_zeros(&mut block[..=last]);
 
     // small correction for overcounting zeros in the last word
-    return prime_count - (block[last] | mask(nbits % 64)).count_zeros() as u64;
+    prime_count - (block[last] | mask(nbits % 64)).count_zeros() as u64
 }
 
 /// Compute a / b mod WHEEL_SZ
@@ -80,29 +74,31 @@ fn mod_div(a: usize, b: usize) -> Option<usize> {
 }
 
 /// Count the number of primes congruent to w modulo WHEEL_SZ.
-fn count_res_class(nbits: usize, small_primes: &[usize], w: usize) -> u64 {
+fn count_res_class(nbits: usize, primes: &[usize], w: usize) -> u64 {
     let mut block: [u64; BLOCK_SZ] = [0; BLOCK_SZ];
-    let mut offsets = small_primes
+    let mut offsets = primes
         .iter()
         .map(|&p| (mod_div(w, p).unwrap() * p) / WHEEL_SZ)
         .collect::<Vec<usize>>();
-    sieve_blocks(nbits, small_primes, &mut offsets, &mut block)
+    sieve(nbits, primes, &mut offsets, &mut block)
 }
 
+/// Compute total number of primes <= n.
 pub fn count_primes(n: usize) -> u64 {
     let s = (n as f64).sqrt() as usize;
-    let small_primes: Vec<usize> = small_sieve(s);
+    let primes: Vec<usize> = small_sieve(s);
     let nbits = n / WHEEL_SZ;
 
+    // Start a thread for each residue in our wheel
     let handles = WHEEL
         .iter()
         .map(|&w| {
-            let small_primes = small_primes.clone();
+            let primes = primes.clone();
             std::thread::spawn(move || -> u64 {
                 if w <= (n % WHEEL_SZ) {
-                    count_res_class(nbits + 1, &small_primes, w)
+                    count_res_class(nbits + 1, &primes, w)
                 } else {
-                    count_res_class(nbits, &small_primes, w)
+                    count_res_class(nbits, &primes, w)
                 }
             })
         })
@@ -120,7 +116,7 @@ pub fn count_primes(n: usize) -> u64 {
         }
     }
     // Also add primes used for sieving because they sieved themselves out.
-    prime_count += small_primes.len() as u64;
+    prime_count += primes.len() as u64;
     // Finally subtract 1 because it isn't prime.
     if n >= 1 {
         prime_count -= 1;

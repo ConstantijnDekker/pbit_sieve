@@ -10,7 +10,8 @@ fn main() {
                 .parse()
                 .expect("Invalid numeric literal format");
             let prime_count: u64 = sieve::count_primes(n);
-            println!("Found {prime_count} primes below {n} in {} seconds",
+            println!(
+                "Found {prime_count} primes below {n} in {} seconds",
                 now.elapsed().as_micros() as f64 / 1_000_000.
             );
         }
