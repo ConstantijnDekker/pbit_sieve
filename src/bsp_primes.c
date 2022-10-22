@@ -126,7 +126,7 @@ unsigned P = 12;
 
 void bsp_prime_count() {
     bsp_begin(P);
-    uint64_t nblocks = 192;
+    uint64_t nblocks = 500;
     uint64_t nprimes = 0;
     uint64_t prime_cnt = count_primes(nblocks, &nprimes);
     bsp_pid_t s = bsp_pid();
