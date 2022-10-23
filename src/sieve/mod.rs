@@ -78,7 +78,15 @@ fn count_res_class(nbits: usize, primes: &[usize], w: usize) -> u64 {
     let mut block: [u64; BLOCK_SZ] = [0; BLOCK_SZ];
     let mut offsets = primes
         .iter()
-        .map(|&p| (mod_div(w, p).unwrap() * p) / WHEEL_SZ)
+        .map(|&p| -> usize {
+            let mut r = mod_div(w, p).unwrap();
+            if r >= (p % WHEEL_SZ) {
+                r += p - (p % WHEEL_SZ)
+            } else {
+                r += p - (p % WHEEL_SZ) + WHEEL_SZ
+            };
+            (r * p) / WHEEL_SZ
+        })
         .collect::<Vec<usize>>();
     sieve(nbits, primes, &mut offsets, &mut block)
 }
@@ -115,8 +123,6 @@ pub fn count_primes(n: usize) -> u64 {
             prime_count += 1;
         }
     }
-    // Also add primes used for sieving because they sieved themselves out.
-    prime_count += primes.len() as u64;
     // Finally subtract 1 because it isn't prime.
     if n >= 1 {
         prime_count -= 1;
