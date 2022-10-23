@@ -101,7 +101,7 @@ fn count_res_class(nbits: usize, primes: &[usize], w: usize) -> u64 {
         .map(|&p| -> usize {
             let mut r = mod_div(w, p).unwrap();
             // Make sure r >= p while remaining the same mod WHEEL_SZ
-            if r >= (p % WHEEL_SZ) {
+            if r >= p % WHEEL_SZ {
                 r += p - (p % WHEEL_SZ)
             } else {
                 r += p - (p % WHEEL_SZ) + WHEEL_SZ
@@ -124,7 +124,7 @@ pub fn count_primes(n: usize) -> u64 {
         .map(|&w| {
             let primes = primes.clone();
             std::thread::spawn(move || -> u64 {
-                if w <= (n % WHEEL_SZ) {
+                if w <= n % WHEEL_SZ {
                     count_res_class(n / WHEEL_SZ + 1, &primes, w)
                 } else {
                     count_res_class(n / WHEEL_SZ, &primes, w)
