@@ -91,12 +91,8 @@ fn mod_div(a: usize, b: usize) -> Option<usize> {
     WHEEL.iter().find(|&&w| (w * b) % WHEEL_SZ == a).copied()
 }
 
-/// Count the number of primes congruent to w modulo WHEEL_SZ.
-fn count_res_class(nbits: usize, primes: &[usize], w: usize) -> u64 {
-    let mut block: [u64; BLOCK_SZ] = [0; BLOCK_SZ];
-    // Offsets[i] is the bitindex primes[i] has to start
-    // marking off in the next block.
-    let mut offsets = primes
+fn generate_offsets(primes: &[usize], w: usize) -> Vec<usize> {
+    primes
         .iter()
         .map(|&p| -> usize {
             let mut r = mod_div(w, p).unwrap();
@@ -109,7 +105,15 @@ fn count_res_class(nbits: usize, primes: &[usize], w: usize) -> u64 {
             // bit index of first multiple of p to be crossed of
             (r * p) / WHEEL_SZ
         })
-        .collect::<Vec<usize>>();
+        .collect()
+}
+
+/// Count the number of primes congruent to w modulo WHEEL_SZ.
+fn count_res_class(nbits: usize, primes: &[usize], w: usize) -> u64 {
+    let mut block: [u64; BLOCK_SZ] = [0; BLOCK_SZ];
+    // Offsets[i] is the bitindex primes[i] has to start
+    // marking off in the next block.
+    let mut offsets = generate_offsets(primes, w);
     sieve(nbits, primes, &mut offsets, &mut block)
 }
 
